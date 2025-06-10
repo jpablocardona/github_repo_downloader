@@ -12,48 +12,39 @@ from tqdm import tqdm
 
 
 def parse_args():
-    """Parsea los argumentos de línea de comandos."""
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Descarga o actualiza repositorios de GitHub"
+        description="Download or update GitHub repositories"
     )
+    parser.add_argument("--input", required=True, help="Text file with repository list")
     parser.add_argument(
-        "--input",
-        required=True,
-        help="Archivo de texto con la lista de repositorios"
+        "--output", default="./repos", help="Output directory for repositories"
     )
-    parser.add_argument(
-        "--output",
-        default="./repos",
-        help="Directorio de salida para los repositorios"
-    )
-    parser.add_argument(
-        "--token",
-        help="Token de acceso personal de GitHub"
-    )
+    parser.add_argument("--token", help="GitHub personal access token")
     return parser.parse_args()
 
 
 def read_repos_file(file_path: str) -> List[str]:
-    """Lee el archivo de repositorios y retorna la lista de repos."""
+    """Read the repositories file and return the list of repos."""
     try:
         with open(file_path, "r") as f:
             return [line.strip() for line in f if line.strip()]
     except FileNotFoundError:
-        print(f"Error: No se encontró el archivo {file_path}")
+        print(f"Error: File {file_path} not found")
         sys.exit(1)
 
 
 def get_repo_name_from_url(url: str) -> str:
-    """Extrae el nombre del repositorio de una URL SSH o HTTPS."""
+    """Extract repository name from SSH or HTTPS URL."""
     parsed = urlparse(url)
     if parsed.scheme == "git":
-        # Formato SSH: git@github.com:usuario/repo.git
+        # SSH format: git@github.com:user/repo.git
         path = parsed.path.split(":")[-1]
     else:
-        # Formato HTTPS: https://github.com/usuario/repo.git
+        # HTTPS format: https://github.com/user/repo.git
         path = parsed.path
 
-    # Eliminar .git del final si existe
+    # Remove .git from the end if it exists
     if path.endswith(".git"):
         path = path[:-4]
 
@@ -61,7 +52,7 @@ def get_repo_name_from_url(url: str) -> str:
 
 
 def get_default_branch(git_repo: Repo) -> Optional[str]:
-    """Obtiene la rama por defecto del repositorio."""
+    """Get the default branch of the repository."""
     try:
         remote = git_repo.remote()
         remote.fetch()
@@ -74,25 +65,22 @@ def get_default_branch(git_repo: Repo) -> Optional[str]:
 
 
 def clean_untracked_files(git_repo: Repo) -> None:
-    """Elimina archivos y carpetas no rastreados en el repositorio local."""
+    """Remove untracked files and folders in the local repository."""
     try:
         git_repo.git.clean("-fd")
     except Exception as e:
-        print(f"Error al limpiar archivos no rastreados: {str(e)}")
+        print(f"Error cleaning untracked files: {str(e)}")
 
 
-def process_repository(
-    github_client: Github,
-    repo_url: str,
-    output_dir: str
-) -> None:
-    """Procesa un repositorio: lo descarga si no existe o lo actualiza si ya existe."""
+def process_repository(github_client: Github, repo_url: str, output_dir: str) -> None:
+    """Process a repository: download if it doesn't exist or update if it already
+    exists."""
     try:
         repo_name = get_repo_name_from_url(repo_url)
         repo_dir = os.path.join(output_dir, repo_name.replace("/", "_"))
-        
+
         if os.path.exists(repo_dir):
-            print(f"\nActualizando {repo_name}...")
+            print(f"\nUpdating {repo_name}...")
             git_repo = Repo(repo_dir)
             remote = git_repo.remote()
             remote.fetch()
@@ -106,13 +94,13 @@ def process_repository(
                         git_repo.git.checkout(branch_name)
                         git_repo.git.pull("origin", branch_name)
                     except Exception as e:
-                        print(f"Error al actualizar la rama {branch_name}: {str(e)}")
+                        print(f"Error updating branch {branch_name}: {str(e)}")
             if default_branch:
                 clean_untracked_files(git_repo)
                 git_repo.git.checkout(default_branch)
         else:
             os.makedirs(repo_dir, exist_ok=True)
-            print(f"\nDescargando {repo_name}...")
+            print(f"\nDownloading {repo_name}...")
             Repo.clone_from(repo_url, repo_dir)
             git_repo = Repo(repo_dir)
             remote = git_repo.remote()
@@ -125,15 +113,15 @@ def process_repository(
                             clean_untracked_files(git_repo)
                             git_repo.git.checkout("-b", branch_name, ref.name)
                     except Exception as e:
-                        print(f"Error al descargar la rama {branch_name}: {str(e)}")
+                        print(f"Error downloading branch {branch_name}: {str(e)}")
             remote.fetch(tags=True)
             if default_branch:
                 clean_untracked_files(git_repo)
                 git_repo.git.checkout(default_branch)
-        print(f"✅ Repositorio {repo_name} procesado exitosamente")
+        print(f"✅ Repository {repo_name} processed successfully")
     except Exception as e:
-        print(f"❌ Error al procesar {repo_url}: {str(e)}")
-        # No detener el script, continuar con el siguiente repo
+        print(f"❌ Error processing {repo_url}: {str(e)}")
+        # Don't stop the script, continue with the next repo
 
 
 def main() -> None:
@@ -141,13 +129,9 @@ def main() -> None:
     os.makedirs(args.output, exist_ok=True)
     github_client = Github(args.token) if args.token else Github()
     repos = read_repos_file(args.input)
-    for repo in tqdm(repos, desc="Procesando repositorios"):
-        process_repository(
-            github_client,
-            repo,
-            args.output
-        )
+    for repo in tqdm(repos, desc="Processing repositories"):
+        process_repository(github_client, repo, args.output)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

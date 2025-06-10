@@ -13,19 +13,12 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Lista repositorios de una organización de GitHub"
     )
+    parser.add_argument("--org", required=True, help="Nombre de la organización")
     parser.add_argument(
-        "--org",
-        required=True,
-        help="Nombre de la organización"
+        "--output", help="Archivo de salida para guardar la lista de repositorios"
     )
     parser.add_argument(
-        "--output",
-        help="Archivo de salida para guardar la lista de repositorios"
-    )
-    parser.add_argument(
-        "--token",
-        required=True,
-        help="Token de acceso personal de GitHub"
+        "--token", required=True, help="Token de acceso personal de GitHub"
     )
     return parser.parse_args()
 
@@ -75,4 +68,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()
