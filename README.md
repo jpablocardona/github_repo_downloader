@@ -11,7 +11,6 @@ github_repo_downloader/
 │   └── downloader.py          # Downloads/updates repositories from input file
 ├── requirements.txt           # Python dependencies
 ├── repos.txt                 # Example file with repository URLs
-├── CLAUDE.md                 # Guide for Claude Code
 └── README.md                 # This documentation
 ```
 
