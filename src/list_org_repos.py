@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import sys
 from typing import List
 
+from dotenv import load_dotenv
 from github import Github
 from tqdm import tqdm
 
@@ -13,13 +15,11 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Lista repositorios de una organización de GitHub"
     )
-    parser.add_argument("--org", required=True, help="Nombre de la organización")
+    parser.add_argument("--org", help="Nombre de la organización")
     parser.add_argument(
         "--output", help="Archivo de salida para guardar la lista de repositorios"
     )
-    parser.add_argument(
-        "--token", required=True, help="Token de acceso personal de GitHub"
-    )
+    parser.add_argument("--token", help="Token de acceso personal de GitHub")
     return parser.parse_args()
 
 
@@ -52,12 +52,36 @@ def save_repos_to_file(repos: List[str], output_file: str) -> None:
         sys.exit(1)
 
 
+def get_config_values(args) -> tuple[str, str]:
+    """Obtiene los valores de configuración desde argumentos o variables de entorno."""
+    # Cargar variables de entorno desde .env si existe
+    load_dotenv()
+
+    # Obtener token
+    token = args.token or os.getenv("GITHUB_TOKEN")
+    if not token:
+        print("❌ Error: Se requiere un token de GitHub.")
+        print("   Proporciona --token o configura GITHUB_TOKEN en .env")
+        sys.exit(1)
+
+    # Obtener organización
+    org = args.org or os.getenv("ORGANIZATION")
+    if not org:
+        print("❌ Error: Se requiere el nombre de la organización.")
+        print("   Proporciona --org o configura ORGANIZATION en .env")
+        sys.exit(1)
+
+    return token, org
+
+
 def main() -> None:
     """Función principal."""
     args = parse_args()
 
-    github_client = Github(args.token)
-    repos = get_org_repos(github_client, args.org)
+    token, org = get_config_values(args)
+
+    github_client = Github(token)
+    repos = get_org_repos(github_client, org)
 
     if args.output:
         save_repos_to_file(repos, args.output)
